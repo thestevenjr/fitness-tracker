@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Swim to 180 — Fitness Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --pool-deep: #0B4F6C;
+    --pool-mid: #1C7C93;
+    --foam: #F4FAFA;
+    --ink: #0A1F2B;
+    --coral: #E85D3D;
+    --lane-yellow: #F4C430;
+    --line: #D7E4E8;
+    --muted: #8FA3AA;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--foam); color: var(--ink); font-family: 'Inter', sans-serif; padding-bottom: 40px; }
+  .display { font-family: 'Bebas Neue', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  .header { background: linear-gradient(160deg, var(--pool-deep), var(--pool-mid)); padding: 28px 16px 22px; color: #fff; }
+  .header-inner { max-width: 640px; margin: 0 auto; }
+  .eyebrow { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 3px; opacity: .75; text-transform: uppercase; }
+  .weight-row { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
+  .weight-big { font-family: 'Bebas Neue', sans-serif; font-size: 56px; line-height: 1; }
+  .weight-sub { font-size: 14px; opacity: .8; }
+  .progress-note { font-size: 13px; opacity: .85; margin-top: 2px; }
+
+  .lane { position: relative; margin-top: 18px; height: 34px; }
+  .lane-track { position: absolute; top: 50%; left: 0; right: 0; height: 3px; background: rgba(255,255,255,.25); transform: translateY(-50%); }
+  .lane-fill { position: absolute; top: 50%; left: 0; height: 3px; background: var(--lane-yellow); transform: translateY(-50%); transition: width .4s ease; }
+  .lane-disk { position: absolute; top: 50%; width: 8px; height: 8px; border-radius: 50%; transform: translate(-50%,-50%); }
+  .lane-swimmer { position: absolute; top: 50%; transform: translate(-50%,-50%) scaleX(-1); font-size: 18px; transition: left .4s ease; }
+  .lane-labels { display: flex; justify-content: space-between; font-size: 11px; opacity: .7; margin-top: 4px; }
+
+  .tabs { display: flex; max-width: 640px; margin: 0 auto; border-bottom: 1px solid var(--line); background: #fff; }
+  .tab-btn { flex: 1; padding: 12px 0; background: none; border: none; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 500; font-size: 14px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .tab-btn.active { border-bottom-color: var(--coral); color: var(--pool-deep); font-weight: 700; }
+
+  .container { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+
+  .card { background: #fff; border-radius: 14px; padding: 16px; margin-top: 14px; box-shadow: 0 1px 3px rgba(11,79,108,.08); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .card-title { font-weight: 700; font-size: 14px; color: var(--pool-deep); }
+
+  .date-nav { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+  .icon-btn { background: #fff; border: 1px solid var(--line); border-radius: 8px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--pool-deep); font-size: 14px; }
+  .icon-btn.disabled { opacity: .3; pointer-events: none; }
+  .date-label { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 14px; color: var(--pool-deep); min-width: 150px; justify-content: center; }
+
+  .row { display: flex; gap: 8px; }
+  input[type=text], input[type=number] { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; min-width: 0; }
+  .btn-primary { background: var(--pool-deep); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .chip { border: 1px solid var(--line); background: var(--foam); color: var(--pool-deep); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .chip.active-type { background: var(--pool-deep); color: #fff; border-color: var(--pool-deep); }
+  .chip.active-preset { background: var(--coral); color: #fff; border-color: var(--coral); }
+  .chip-wrap { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .section-label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+
+  .entry-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .entry { display: flex; justify-content: space-between; align-items: center; font-size: 13px; background: var(--foam); border-radius: 8px; padding: 6px 10px; }
+  .entry button { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 14px; }
+
+  .target-bar { margin-bottom: 8px; }
+  .target-bar-top { display: flex; justify-content: space-between; font-size: 12px; font-family: 'JetBrains Mono', monospace; color: #5A7178; margin-bottom: 3px; }
+  .bar-track { height: 6px; background: var(--line); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; background: var(--pool-mid); transition: width .3s ease; }
+  .bar-fill.over { background: var(--coral); }
+
+  .empty { text-align: center; padding: 40px 0; color: var(--muted); font-size: 14px; }
+
+  .stat-row { display: flex; gap: 16px; }
+  .stat-val { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--pool-deep); letter-spacing: .5px; }
+  .stat-label { font-size: 11px; color: var(--muted); }
+
+  .reset-link { background: none; border: none; color: var(--muted); font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+  .footer { max-width: 640px; margin: 24px auto 0; padding: 0 16px; }
+  .banner { background: #FDEDE8; color: var(--coral); padding: 8px 12px; border-radius: 8px; font-size: 13px; margin: 12px 0; }
+
+  .preset-grams { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; background: var(--foam); padding: 10px; border-radius: 8px; }
+  .preset-grams span { font-size: 12px; color: #5A7178; white-space: nowrap; }
+
+  svg text { font-family: 'JetBrains Mono', monospace; }
+
+  .sync-bar { max-width: 640px; margin: 0 auto; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12px; }
+  .sync-status { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex-shrink: 0; }
+  .sync-dot.connected { background: #3FA66B; }
+  .sync-dot.syncing { background: var(--lane-yellow); animation: pulse 1s infinite; }
+  .sync-dot.error { background: var(--coral); }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  .sync-actions { display: flex; gap: 8px; }
+  .btn-link { background: none; border: none; color: var(--pool-mid); font-size: 12px; font-weight: 600; cursor: pointer; padding: 0; }
+  .btn-small { background: var(--pool-deep); color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .code-paste-row { max-width: 640px; margin: 0 auto; padding: 0 16px 10px; display: flex; gap: 8px; background: #fff; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-inner">
+    <div class="eyebrow">Swim to 180</div>
+    <div class="weight-row">
+      <div class="weight-big" id="currentWeight">210</div>
+      <div class="weight-sub" id="weightSub">lbs · goal 180</div>
+    </div>
+    <div class="progress-note" id="progressNote">Log your first weigh-in to start the lane</div>
+    <div class="lane">
+      <div class="lane-track"></div>
+      <div class="lane-fill" id="laneFill"></div>
+      <div id="laneDisks"></div>
+      <div class="lane-swimmer" id="laneSwimmer">🏊</div>
+    </div>
+    <div class="lane-labels"><span>210</span><span>180</span></div>
+  </div>
+</div>
+
+<div class="sync-bar" id="syncBar"></div>
+<div class="code-paste-row" id="codePasteRow" style="display:none;"></div>
+
+<div class="tabs">
+  <button class="tab-btn active" data-tab="today">Today</button>
+  <button class="tab-btn" data-tab="history">History</button>
+  <button class="tab-btn" data-tab="progress">Progress</button>
+</div>
+
+<div class="container" id="content"></div>
+
+<div class="footer">
+  <button class="reset-link" id="resetBtn">Reset all data</button>
+</div>
+
+<script>
+// ---------- Data layer (localStorage) ----------
+const STORAGE_KEY = 'lane-to-180-tracker';
+const START_WEIGHT = 210, GOAL_WEIGHT = 180, CAL_TARGET = 2400, PROTEIN_TARGET = 180;
+
+const EX_TYPES = [
+  { key: 'swim', label: 'Swim' },
+  { key: 'strength', label: 'Strength' },
+  { key: 'fitness', label: 'Apple Fitness' },
+  { key: 'other', label: 'Other' },
+];
+
+const PRESET_FOODS = [
+  { name: 'Chicken breast', per100g: { cal: 165, protein: 31 } },
+  { name: '93% lean ground beef', per100g: { cal: 172, protein: 20 } },
+  { name: 'Salmon', per100g: { cal: 206, protein: 22 } },
+  { name: 'Egg (1 large, ~50g)', fixed: { cal: 72, protein: 6 } },
+  { name: 'Greek yogurt (plain)', per100g: { cal: 59, protein: 10 } },
+  { name: 'Rice (cooked)', per100g: { cal: 130, protein: 3 } },
+  { name: 'Oats (dry)', per100g: { cal: 389, protein: 17 } },
+  { name: 'Pasta (cooked)', per100g: { cal: 131, protein: 5 } },
+  { name: 'Cottage cheese', per100g: { cal: 98, protein: 11 } },
+  { name: 'Whey protein scoop (~30g)', fixed: { cal: 120, protein: 24 } },
+  { name: 'Almonds', per100g: { cal: 579, protein: 21 } },
+  { name: 'Avocado (half)', fixed: { cal: 160, protein: 2 } },
+];
+
+function defaultState() {
+  return { weighins: [], logs: {}, startWeight: START_WEIGHT, goalWeight: GOAL_WEIGHT, updatedAt: 0 };
+}
+
+// ---------- Dropbox sync ----------
+const DBX_APP_KEY = '2eadsy9tc8eqonn';
+const DBX_TOKENS_KEY = 'lane180-dbx-tokens';
+const DBX_VERIFIER_KEY = 'lane180-dbx-verifier';
+const DBX_FILE_PATH = '/tracker-data.json';
+
+let dbxStatus = 'disconnected'; // disconnected | connecting | connected | syncing | error
+let dbxLastSynced = null;
+let dbxErrorMsg = '';
+let dbxSyncTimer = null;
+
+function randomVerifier(len) {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  let out = '';
+  for (let i = 0; i < len; i++) out += chars[arr[i] % chars.length];
+  return out;
+}
+
+function dbxTokens() {
+  try {
+    const raw = localStorage.getItem(DBX_TOKENS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+function dbxSaveTokens(t) {
+  localStorage.setItem(DBX_TOKENS_KEY, JSON.stringify(t));
+}
+function dbxClearTokens() {
+  localStorage.removeItem(DBX_TOKENS_KEY);
+}
+
+function dbxStartConnect() {
+  const verifier = randomVerifier(64);
+  sessionStorage.setItem(DBX_VERIFIER_KEY, verifier);
+  const params = new URLSearchParams({
+    client_id: DBX_APP_KEY,
+    response_type: 'code',
+    code_challenge: verifier,
+    code_challenge_method: 'plain',
+    token_access_type: 'offline',
+  });
+  window.open('https://www.dropbox.com/oauth2/authorize?' + params.toString(), '_blank');
+  dbxStatus = 'connecting';
+  renderSyncBar();
+}
+
+async function dbxSubmitCode(code) {
+  const verifier = sessionStorage.getItem(DBX_VERIFIER_KEY);
+  if (!code || !verifier) return;
+  dbxStatus = 'syncing';
+  renderSyncBar();
+  try {
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        code: code.trim(),
+        client_id: DBX_APP_KEY,
+        code_verifier: verifier,
+      }),
+    });
+    if (!res.ok) throw new Error('Token exchange failed (' + res.status + ')');
+    const data = await res.json();
+    dbxSaveTokens({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: Date.now() + (data.expires_in - 60) * 1000,
+    });
+    dbxStatus = 'connected';
+    dbxErrorMsg = '';
+    document.getElementById('codePasteRow').style.display = 'none';
+    await dbxSync();
+  } catch (e) {
+    dbxStatus = 'error';
+    dbxErrorMsg = "Couldn't connect — check the code and try again.";
+    renderSyncBar();
+  }
+}
+
+async function dbxGetValidToken() {
+  const t = dbxTokens();
+  if (!t) return null;
+  if (Date.now() < t.expires_at) return t.access_token;
+  // refresh
+  try {
+    const res = await fetch('https://api.dropboxapi.com/oauth2/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        refresh_token: t.refresh_token,
+        client_id: DBX_APP_KEY,
+      }),
+    });
+    if (!res.ok) throw new Error('Refresh failed');
+    const data = await res.json();
+    const next = { ...t, access_token: data.access_token, expires_at: Date.now() + (data.expires_in - 60) * 1000 };
+    dbxSaveTokens(next);
+    return next.access_token;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function dbxDownload(token) {
+  const res = await fetch('https://content.dropboxapi.com/2/files/download', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Dropbox-API-Arg': JSON.stringify({ path: DBX_FILE_PATH }),
+    },
+  });
+  if (res.status === 409) return null; // file doesn't exist yet
+  if (!res.ok) throw new Error('Download failed (' + res.status + ')');
+  const text = await res.text();
+  return JSON.parse(text);
+}
+
+async function dbxUpload(token, dataObj) {
+  const res = await fetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + token,
+      'Dropbox-API-Arg': JSON.stringify({ path: DBX_FILE_PATH, mode: 'overwrite', mute: true }),
+      'Content-Type': 'application/octet-stream',
+    },
+    body: JSON.stringify(dataObj),
+  });
+  if (!res.ok) throw new Error('Upload failed (' + res.status + ')');
+}
+
+async function dbxSync(opts) {
+  opts = opts || {};
+  const token = await dbxGetValidToken();
+  if (!token) {
+    dbxStatus = 'error';
+    dbxErrorMsg = 'Dropbox session expired — reconnect below.';
+    renderSyncBar();
+    return;
+  }
+  dbxStatus = 'syncing';
+  renderSyncBar();
+  try {
+    const remote = await dbxDownload(token);
+    if (!remote) {
+      await dbxUpload(token, state);
+    } else if ((remote.updatedAt || 0) > (state.updatedAt || 0)) {
+      state = { ...defaultState(), ...remote };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      render();
+    } else if ((state.updatedAt || 0) > (remote.updatedAt || 0)) {
+      await dbxUpload(token, state);
+    }
+    dbxStatus = 'connected';
+    dbxErrorMsg = '';
+    dbxLastSynced = new Date();
+  } catch (e) {
+    dbxStatus = 'error';
+    dbxErrorMsg = 'Sync failed — check your connection and try again.';
+  }
+  renderSyncBar();
+}
+
+function dbxQueueSync() {
+  if (!dbxTokens()) return;
+  clearTimeout(dbxSyncTimer);
+  dbxSyncTimer = setTimeout(() => dbxSync(), 1200);
+}
+
+function dbxDisconnect() {
+  dbxClearTokens();
+  dbxStatus = 'disconnected';
+  dbxLastSynced = null;
+  renderSyncBar();
+}
+
+function renderSyncBar() {
+  const bar = document.getElementById('syncBar');
+  const pasteRow = document.getElementById('codePasteRow');
+  if (!bar) return;
+
+  let dotClass = 'sync-dot';
+  let label = 'Not connected to Dropbox';
+  let actions = `<button class="btn-small" id="dbxConnectBtn">Connect Dropbox</button>`;
+
+  if (dbxStatus === 'connecting') {
+    label = 'Waiting for code from Dropbox…';
+    actions = `<button class="btn-link" id="dbxCancelBtn">Cancel</button>`;
+    pasteRow.style.display = 'flex';
+    pasteRow.innerHTML = `
+      <input type="text" id="dbxCodeInput" placeholder="Paste code from Dropbox here">
+      <button class="btn-primary" id="dbxCodeSubmit">Submit</button>
+    `;
+  } else if (dbxStatus === 'syncing') {
+    dotClass += ' syncing';
+    label = 'Syncing…';
+    actions = '';
+  } else if (dbxStatus === 'connected') {
+    dotClass += ' connected';
+    label = dbxLastSynced ? `Synced · ${dbxLastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Connected';
+    actions = `<button class="btn-link" id="dbxSyncBtn">Sync now</button><button class="btn-link" id="dbxDisconnectBtn">Disconnect</button>`;
+    pasteRow.style.display = 'none';
+  } else if (dbxStatus === 'error') {
+    dotClass += ' error';
+    label = dbxErrorMsg || 'Sync error';
+    actions = `<button class="btn-small" id="dbxConnectBtn">${dbxTokens() ? 'Reconnect' : 'Connect Dropbox'}</button>`;
+  }
+
+  bar.innerHTML = `
+    <div class="sync-status"><div class="${dotClass}"></div>${label}</div>
+    <div class="sync-actions">${actions}</div>
+  `;
+
+  const connectBtn = document.getElementById('dbxConnectBtn');
+  if (connectBtn) connectBtn.onclick = dbxStartConnect;
+  const cancelBtn = document.getElementById('dbxCancelBtn');
+  if (cancelBtn) cancelBtn.onclick = () => { dbxStatus = 'disconnected'; pasteRow.style.display = 'none'; renderSyncBar(); };
+  const codeSubmit = document.getElementById('dbxCodeSubmit');
+  if (codeSubmit) codeSubmit.onclick = () => dbxSubmitCode(document.getElementById('dbxCodeInput').value);
+  const syncBtn = document.getElementById('dbxSyncBtn');
+  if (syncBtn) syncBtn.onclick = () => dbxSync();
+  const disconnectBtn = document.getElementById('dbxDisconnectBtn');
+  if (disconnectBtn) disconnectBtn.onclick = dbxDisconnect;
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    return { ...defaultState(), ...JSON.parse(raw) };
+  } catch (e) {
+    return defaultState();
+  }
+}
+function saveState() {
+  try {
+    state.updatedAt = Date.now();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    showBanner(null);
+    dbxQueueSync();
+  } catch (e) {
+    showBanner("Couldn't save — your browser storage may be full or disabled.");
+  }
+}
+function showBanner(msg) {
+  const el = document.getElementById('bannerSlot');
+  if (!el) return;
+  el.innerHTML = msg ? `<div class="banner">${msg}</div>` : '';
+}
+
+let state = loadState();
+let tab = 'today';
+let activeDate = todayStr();
+let activePreset = null;
+
+// ---------- Helpers ----------
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function fmtDate(str) {
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+}
+function shortDate(str) {
+  const d = new Date(str + 'T00:00:00');
+  return d.toLocaleDateString(undefined, { month: 'numeric', day: 'numeric' });
+}
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function getDayLog(date) { return state.logs[date] || { exercises: [], meals: [] }; }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function currentWeight() {
+  if (state.weighins.length === 0) return state.startWeight;
+  return state.weighins[state.weighins.length - 1].weight;
+}
+
+// ---------- Mutations ----------
+function addExercise(date, ex) {
+  const day = getDayLog(date);
+  day.exercises = [...day.exercises, { id: uid(), ...ex }];
+  state.logs[date] = day;
+  saveState(); render();
+}
+function removeExercise(date, id) {
+  const day = getDayLog(date);
+  day.exercises = day.exercises.filter(e => e.id !== id);
+  state.logs[date] = day;
+  saveState(); render();
+}
+function addMeal(date, meal) {
+  const day = getDayLog(date);
+  day.meals = [...day.meals, { id: uid(), ...meal }];
+  state.logs[date] = day;
+  saveState(); render();
+}
+function removeMeal(date, id) {
+  const day = getDayLog(date);
+  day.meals = day.meals.filter(m => m.id !== id);
+  state.logs[date] = day;
+  saveState(); render();
+}
+function logWeight(date, weight) {
+  state.weighins = [...state.weighins.filter(w => w.date !== date), { date, weight }].sort((a, b) => a.date < b.date ? -1 : 1);
+  saveState(); render();
+}
+function removeWeighin(date) {
+  state.weighins = state.weighins.filter(w => w.date !== date);
+  saveState(); render();
+}
+function resetAll() {
+  state = defaultState();
+  saveState(); render();
+}
+
+// ---------- Render: Header ----------
+function renderHeader() {
+  const cw = currentWeight();
+  const totalToLose = state.startWeight - state.goalWeight;
+  const lost = Math.max(0, state.startWeight - cw);
+  const pct = Math.min(100, Math.max(0, (lost / totalToLose) * 100));
+
+  document.getElementById('currentWeight').textContent = cw;
+  document.getElementById('progressNote').textContent = lost > 0
+    ? `${lost.toFixed(1)} lbs down, ${Math.max(0, cw - state.goalWeight).toFixed(1)} to go`
+    : 'Log your first weigh-in to start the lane';
+  document.getElementById('laneFill').style.width = pct + '%';
+  document.getElementById('laneSwimmer').style.left = pct + '%';
+
+  const disks = document.getElementById('laneDisks');
+  disks.innerHTML = '';
+  for (let i = 0; i <= 10; i++) {
+    const d = document.createElement('div');
+    d.className = 'lane-disk';
+    d.style.left = (i / 10 * 100) + '%';
+    d.style.background = (i / 10 <= pct / 100) ? 'var(--lane-yellow)' : 'rgba(255,255,255,.35)';
+    disks.appendChild(d);
+  }
+}
+
+// ---------- Render: Today ----------
+function renderToday() {
+  const day = getDayLog(activeDate);
+  const weighin = state.weighins.find(w => w.date === activeDate);
+  const totals = day.meals.reduce((a, m) => ({ cal: a.cal + (Number(m.calories) || 0), protein: a.protein + (Number(m.protein) || 0) }), { cal: 0, protein: 0 });
+
+  const exChips = EX_TYPES.map(t => `<button class="chip ${window._exType === t.key ? 'active-type' : ''}" data-extype="${t.key}">${t.label}</button>`).join('');
+
+  const presetChips = PRESET_FOODS.map(p => `<button class="chip ${activePreset === p.name ? 'active-preset' : ''}" data-preset="${escapeHtml(p.name)}">${escapeHtml(p.name)}</button>`).join('');
+
+  const presetObj = PRESET_FOODS.find(p => p.name === activePreset);
+  const gramsRow = presetObj ? `
+    <div class="preset-grams">
+      <span>${escapeHtml(presetObj.name)}, grams:</span>
+      <input type="number" inputmode="numeric" id="presetGrams" placeholder="e.g. 150">
+      <button class="btn-primary" id="presetGramsSubmit">+</button>
+    </div>` : '';
+
+  const exList = day.exercises.map(e => `
+    <div class="entry"><span>${EX_TYPES.find(t => t.key === e.type)?.label || e.type} — ${escapeHtml(e.detail)}</span>
+    <button data-rmex="${e.id}">✕</button></div>`).join('');
+
+  const mealList = day.meals.map(m => `
+    <div class="entry"><span>${escapeHtml(m.name)} — ${m.calories || 0} cal, ${m.protein || 0}g protein</span>
+    <button data-rmmeal="${m.id}">✕</button></div>`).join('');
+
+  const calPct = Math.min(100, totals.cal / CAL_TARGET * 100);
+  const protPct = Math.min(100, totals.protein / PROTEIN_TARGET * 100);
+  const calOver = totals.cal > CAL_TARGET * 1.05;
+  const protOver = totals.protein > PROTEIN_TARGET * 1.05;
+
+  const isToday = activeDate === todayStr();
+  const nextDisabled = activeDate >= todayStr() ? 'disabled' : '';
+
+  document.getElementById('content').innerHTML = `
+    <div class="date-nav">
+      <button class="icon-btn" id="ddatePrev">‹</button>
+      <div class="date-label">📅 ${isToday ? 'Today' : fmtDate(activeDate)}</div>
+      <button class="icon-btn ${nextDisabled}" id="dateNext">›</button>
+    </div>
+
+    <div id="bannerSlot"></div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Weigh-in</div></div>
+      <div class="row">
+        <input type="number" inputmode="decimal" id="weightInput" placeholder="Weight (lbs)" value="${weighin ? weighin.weight : ''}">
+        <button class="btn-primary" id="weightSubmit">Save</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Exercise</div></div>
+      <div class="chip-wrap">${exChips}</div>
+      <div class="row">
+        <input type="text" id="exDetail" placeholder="e.g. 1200m intervals, 45 min, Core HIIT">
+        <button class="btn-primary" id="exSubmit">+</button>
+      </div>
+      <div class="entry-list">${exList}</div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><div class="card-title">Food</div></div>
+      <div class="section-label">Quick add</div>
+      <div class="chip-wrap">${presetChips}</div>
+      ${gramsRow}
+      <div class="section-label">Custom</div>
+      <div class="row" style="margin-bottom:8px;">
+        <input type="text" id="mealName" placeholder="Meal">
+      </div>
+      <div class="row">
+        <input type="number" inputmode="numeric" id="mealCal" placeholder="Calories">
+        <input type="number" inputmode="numeric" id="mealProtein" placeholder="Protein (g)">
+        <button class="btn-primary" id="mealSubmit">+</button>
+      </div>
+      <div class="entry-list">${mealList}</div>
+      <div style="margin-top:12px;">
+        <div class="target-bar">
+          <div class="target-bar-top"><span>Calories</span><span>${totals.cal} / ${CAL_TARGET}</span></div>
+          <div class="bar-track"><div class="bar-fill ${calOver ? 'over' : ''}" style="width:${calPct}%"></div></div>
+        </div>
+        <div class="target-bar">
+          <div class="target-bar-top"><span>Protein</span><span>${totals.protein}g / ${PROTEIN_TARGET}g</span></div>
+          <div class="bar-track"><div class="bar-fill ${protOver ? 'over' : ''}" style="width:${protPct}%"></div></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // wire events
+  document.getElementById('dateNext').onclick = () => {
+    const d = new Date(activeDate + 'T00:00:00'); d.setDate(d.getDate() + 1);
+    const next = d.toISOString().slice(0, 10);
+    if (next <= todayStr()) { activeDate = next; render(); }
+  };
+  document.getElementById('dateNext').classList.toggle('disabled', activeDate >= todayStr());
+  document.getElementById('dateNext').style.pointerEvents = activeDate >= todayStr() ? 'none' : 'auto';
+  document.getElementById('dateNext').style.opacity = activeDate >= todayStr() ? '0.3' : '1';
+
+  document.getElementById('ddatePrev').onclick = () => {
+    const d = new Date(activeDate + 'T00:00:00'); d.setDate(d.getDate() - 1);
+    activeDate = d.toISOString().slice(0, 10); render();
+  };
+
+  document.getElementById('weightSubmit').onclick = () => {
+    const w = parseFloat(document.getElementById('weightInput').value);
+    if (w && w > 0) logWeight(activeDate, w);
+  };
+
+  document.querySelectorAll('[data-extype]').forEach(btn => {
+    btn.onclick = () => { window._exType = btn.getAttribute('data-extype'); render(); };
+  });
+  if (!window._exType) window._exType = 'swim';
+
+  document.getElementById('exSubmit').onclick = () => {
+    const detail = document.getElementById('exDetail').value.trim();
+    if (detail) addExercise(activeDate, { type: window._exType || 'swim', detail });
+  };
+
+  document.querySelectorAll('[data-rmex]').forEach(btn => {
+    btn.onclick = () => removeExercise(activeDate, btn.getAttribute('data-rmex'));
+  });
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.onclick = () => {
+      const name = btn.getAttribute('data-preset');
+      const preset = PRESET_FOODS.find(p => p.name === name);
+      if (preset.fixed) {
+        addMeal(activeDate, { name: preset.name, calories: preset.fixed.cal, protein: preset.fixed.protein });
+      } else {
+        activePreset = activePreset === name ? null : name;
+        render();
+      }
+    };
+  });
+
+  const gramsSubmitBtn = document.getElementById('presetGramsSubmit');
+  if (gramsSubmitBtn) {
+    gramsSubmitBtn.onclick = () => {
+      const g = parseFloat(document.getElementById('presetGrams').value);
+      const preset = PRESET_FOODS.find(p => p.name === activePreset);
+      if (g && g > 0 && preset) {
+        const factor = g / 100;
+        addMeal(activeDate, {
+          name: `${preset.name} (${g}g)`,
+          calories: Math.round(preset.per100g.cal * factor),
+          protein: Math.round(preset.per100g.protein * factor),
+        });
+        activePreset = null;
+      }
+    };
+  }
+
+  document.getElementById('mealSubmit').onclick = () => {
+    const name = document.getElementById('mealName').value.trim();
+    if (!name) return;
+    const cal = document.getElementById('mealCal').value || 0;
+    const protein = document.getElementById('mealProtein').value || 0;
+    addMeal(activeDate, { name, calories: cal, protein });
+  };
+
+  document.querySelectorAll('[data-rmmeal]').forEach(btn => {
+    btn.onclick = () => removeMeal(activeDate, btn.getAttribute('data-rmmeal'));
+  });
+}
+
+// ---------- Render: History ----------
+function renderHistory() {
+  const dateSet = new Set([...Object.keys(state.logs), ...state.weighins.map(w => w.date)]);
+  const dates = Array.from(dateSet).sort((a, b) => a < b ? 1 : -1);
+
+  if (dates.length === 0) {
+    document.getElementById('content').innerHTML = `<div id="bannerSlot"></div><div class="empty">No entries yet. Log something on the Today tab to see it here.</div>`;
+    return;
+  }
+
+  const cards = dates.map(date => {
+    const log = state.logs[date] || { exercises: [], meals: [] };
+    const weighin = state.weighins.find(w => w.date === date);
+    const cal = log.meals.reduce((a, m) => a + (Number(m.calories) || 0), 0);
+    const protein = log.meals.reduce((a, m) => a + (Number(m.protein) || 0), 0);
+
+    const weighinRow = weighin ? `<div style="font-size:13px;margin-bottom:6px;display:flex;justify-content:space-between;"><span style="color:#5A7178;">Weight</span><span class="mono">${weighin.weight} lbs</span></div>` : '';
+    const exRows = log.exercises.map(e => `<div style="font-size:13px;color:#5A7178;">${EX_TYPES.find(t => t.key === e.type)?.label}: ${escapeHtml(e.detail)}</div>`).join('');
+    const mealRow = log.meals.length > 0 ? `<div style="font-size:13px;display:flex;justify-content:space-between;color:#5A7178;"><span>${log.meals.length} meal${log.meals.length > 1 ? 's' : ''} logged</span><span class="mono">${cal} cal · ${protein}g</span></div>` : '';
+
+    return `<div class="card">
+      <div class="card-head"><div class="card-title">${fmtDate(date)}</div>
+      <button class="reset-link" data-editdate="${date}" style="font-size:11px;color:var(--pool-mid);font-weight:600;">Edit</button></div>
+      ${weighinRow}${exRows}${mealRow}
+    </div>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML = `<div id="bannerSlot"></div>` + cards;
+
+  document.querySelectorAll('[data-editdate]').forEach(btn => {
+    btn.onclick = () => { activeDate = btn.getAttribute('data-editdate'); tab = 'today'; render(); };
+  });
+}
+
+// ---------- Render: Progress ----------
+function renderProgress() {
+  if (state.weighins.length === 0) {
+    document.getElementById('content').innerHTML = `<div id="bannerSlot"></div><div class="empty">Log a few weigh-ins to see your trend line here.</div>`;
+    return;
+  }
+
+  const dates = Object.keys(state.logs).sort();
+  let cal = 0, protein = 0, count = 0, exCount = 0;
+  dates.slice(-7).forEach(d => {
+    const log = state.logs[d];
+    if (log.meals.length > 0) {
+      cal += log.meals.reduce((a, m) => a + (Number(m.calories) || 0), 0);
+      protein += log.meals.reduce((a, m) => a + (Number(m.protein) || 0), 0);
+      count++;
+    }
+    exCount += log.exercises.length;
+  });
+  const avgCal = count > 0 ? Math.round(cal / count) : '—';
+  const avgProtein = count > 0 ? Math.round(protein / count) + 'g' : '—';
+
+  document.getElementById('content').innerHTML = `
+    <div id="bannerSlot"></div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Weight trend</div></div>
+      <div id="chartWrap" style="width:100%;height:220px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><div class="card-title">Last 7 days</div></div>
+      <div class="stat-row">
+        <div style="flex:1;"><div class="stat-val">${avgCal}</div><div class="stat-label">Avg cal/day</div></div>
+        <div style="flex:1;"><div class="stat-val">${avgProtein}</div><div class="stat-label">Avg protein/day</div></div>
+        <div style="flex:1;"><div class="stat-val">${exCount}</div><div class="stat-label">Workouts logged</div></div>
+      </div>
+    </div>
+  `;
+
+  drawChart(document.getElementById('chartWrap'));
+}
+
+function drawChart(container) {
+  const w = container.clientWidth || 560, h = 220;
+  const padL = 40, padR = 12, padT = 16, padB = 24;
+  const data = state.weighins;
+  const weights = data.map(d => d.weight);
+  const minW = Math.min(...weights, state.goalWeight) - 3;
+  const maxW = Math.max(...weights, state.goalWeight) + 3;
+
+  const x = i => padL + (i / Math.max(1, data.length - 1)) * (w - padL - padR);
+  const y = v => padT + (1 - (v - minW) / (maxW - minW)) * (h - padT - padB);
+
+  const points = data.map((d, i) => `${x(i)},${y(d.weight)}`).join(' ');
+  const goalY = y(state.goalWeight);
+
+  const dots = data.map((d, i) => `<circle cx="${x(i)}" cy="${y(d.weight)}" r="3" fill="var(--pool-deep)" />`).join('');
+  const labels = data.map((d, i) => {
+    if (data.length > 8 && i % Math.ceil(data.length / 6) !== 0 && i !== data.length - 1) return '';
+    return `<text x="${x(i)}" y="${h - 6}" font-size="10" fill="var(--muted)" text-anchor="middle">${shortDate(d.date)}</text>`;
+  }).join('');
+
+  container.innerHTML = `
+    <svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}">
+      <line x1="${padL}" y1="${goalY}" x2="${w - padR}" y2="${goalY}" stroke="var(--coral)" stroke-width="1.5" stroke-dasharray="4 4" />
+      <text x="${padL + 4}" y="${goalY - 5}" font-size="10" fill="var(--coral)">Goal</text>
+      <polyline points="${points}" fill="none" stroke="var(--pool-deep)" stroke-width="2.5" />
+      ${dots}
+      ${labels}
+    </svg>
+  `;
+}
+
+// ---------- Main render ----------
+function render() {
+  renderHeader();
+  renderSyncBar();
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === tab));
+  if (tab === 'today') renderToday();
+  else if (tab === 'history') renderHistory();
+  else renderProgress();
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.onclick = () => { tab = btn.getAttribute('data-tab'); render(); };
+});
+
+document.getElementById('resetBtn').onclick = () => {
+  if (confirm("Reset all tracker data? This can't be undone.")) resetAll();
+};
+
+if (dbxTokens()) dbxStatus = 'connected';
+render();
+if (dbxTokens()) dbxSync();
+</script>
+</body>
+</html>
