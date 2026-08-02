@@ -536,7 +536,7 @@ function renderHeader() {
   document.getElementById('currentWeight').textContent = cw;
   document.getElementById('progressNote').textContent = lost > 0
     ? `${lost.toFixed(1)} lbs down, ${Math.max(0, cw - state.goalWeight).toFixed(1)} to go`
-    : 'Log your first weigh-in to start the lane';
+    : 'Reach the end of the pool to complete your goal!';
   document.getElementById('laneFill').style.width = pct + '%';
   document.getElementById('laneSwimmer').style.left = pct + '%';
 
